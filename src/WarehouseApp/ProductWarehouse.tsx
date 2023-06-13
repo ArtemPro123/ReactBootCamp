@@ -1,52 +1,59 @@
 import {Product} from './WarehouseTypes';
-import {Products, DummyProduct} from './DummyInventory';
-import {useState} from 'react';
+import {DummyProduct} from './DummyInventory';
+import {useEffect, useCallback} from 'react';
 import ProductDisplay,{ProductDisplayProps} from './ProductDisplay';
+import {useSelector, useDispatch} from 'react-redux';
+import {AppDispatch, WarehouseState} from './Redux/WarehouseStore';
+import { removeProduct, fetchProducts, setSelectedProduct } from './Redux/ProductsSlice';
 
 const ProductWarehouse = ():JSX.Element => { 
-      
-    const delProduct = (Id:number):void => {
-      let index = Products.findIndex(p => Id === p.productId);
-      Products.splice(index, 1);
-      setSelectedProps( {product: DummyProduct,
-      onRemove: () => {} });
-    };
-    const [selectedProps, setSelectedProps] = 
-                 useState<ProductDisplayProps>({product: DummyProduct, onRemove: delProduct});  
+  const Products:Product[] = useSelector((state:WarehouseState) => state.product.productsList);
+  const selectedProduct:Product = useSelector((state:WarehouseState) => state.product.selectedProduct);
 
-    let showProduct = (e:React.ChangeEvent<HTMLSelectElement>) => {
+  const dispatch:AppDispatch = useDispatch();
+  useEffect( () => { 
+    dispatch(fetchProducts());
+  },
+  [dispatch]);
+
+  const delProduct = (Id:number):void => {
+    dispatch(removeProduct(Id));
+    dispatch(setSelectedProduct(DummyProduct));
+  };   
+  const delProductCallback = useCallback(delProduct, [dispatch]);
+
+  let selectedProps:ProductDisplayProps = {product: DummyProduct, 
+                                            onRemove: delProductCallback };
+  let showProduct = (e:React.ChangeEvent<HTMLSelectElement>) => {
       if (e.target.value !== 'n/a')
-        {
+        {          
           let index:number = Products.findIndex(p => p.productId.toString() === e.target.value);
           if (index !== -1)
           {
-            setSelectedProps({product:Products[index], onRemove: delProduct});
+            dispatch(setSelectedProduct(Products[index]));
           }
-        }
       }
-
-      
-         
+  }  
     
-    return (<>
-                <div className="container text-primary">
-                <h1>Products</h1>
-                <select data-testid='productSelect' onChange={showProduct}>
-                  <option value='n/a'>Select a Product</option>
-                   {
-                     Products.map(
-                        (prod:Product) => {
-                          return (<option value={prod.productId}  key={prod.productId}> 
-                                    {prod.productName} 
-                                   </option>)
-                        }
-                      )
-                    }                    
-                </select>
-                <br/>                 
-                { selectedProps.product.productId !== -1 ?  <ProductDisplay {...selectedProps}/> : null }                
-                </div>   
-            </>);
+  return (<>
+      <div className="container text-primary">
+      <h1>Products</h1>
+      <select data-testid='productSelect' onChange={showProduct}>
+        <option value='n/a'>Select a Product</option>
+          {
+            Products.map(
+              (prod:Product) => {
+                return (<option value={prod.productId}  key={prod.productId}> 
+                          {prod.productName} 
+                          </option>)
+              }
+            )
+          }                    
+      </select>
+      <br/>      
+      { selectedProduct.productId !== -1 ?  <ProductDisplay {...selectedProps}/> : null }                
+      </div>   
+  </>);
 }
 
 export default ProductWarehouse;
